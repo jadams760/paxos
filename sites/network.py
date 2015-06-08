@@ -60,7 +60,6 @@ class Network(threading.Thread):
 
 
     def handle(self, message):
-        pprint(message)
         messageType = message['source']
         # We are either going to be receiving a message from a client or from another site.
         if (messageType == 'site'):
@@ -161,7 +160,7 @@ class Network(threading.Thread):
                 self.clientTalk({'action': 'read', 'success': True, 'contents':self.log, 'source':'site', 'return':self.siteDirectory[self.siteID], 'request':message['request'] }, returnAddress)
             elif (action == 'post'):
                 post = message['message']
-                self.sendPreparePaxos(post, returnAddress)
+                self.sendPreparePaxos(post, returnAddress, message['request'])
 
     def sendPreparePaxos(self, message, returnAddress, clientRequestID):
         with self.logLock, self.requestLock:
