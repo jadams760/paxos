@@ -61,6 +61,7 @@ class Network(threading.Thread):
 
 
     def handle(self, message):
+        pprint(message)
         messageType = message['source']
         # We are either going to be receiving a message from a client or from another site.
         if (messageType == 'site'):
