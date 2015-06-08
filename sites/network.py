@@ -70,10 +70,10 @@ class Network(threading.Thread):
             if (action == 'prepare'):
                 if message['ballotNum'][0] > len(self.log):
                     # If the spot being competed for is larger than the length of our log, then we are missing at least one entry and so we pretend we are a client and ask everyone to send us a log
-                    self.broadcast({'source':'client', 'action':'read', 'return':self.siteDirectory[self.siteID]})
+                    self.broadcast({'source':'client', 'action':'read', 'return':self.siteDirectory[self.siteID], 'request':None})
                 # otherwise, if someone is proposing for a spot that's already taken, we send them our log.
                 elif message['ballotNum'][0] < len(self.log):
-                    self.clientTalk({'action': 'read', 'success': True, 'contents':self.log, 'source':'site', 'return':self.siteDirectory[self.siteID]}, returnAddress)
+                    self.clientTalk({'action': 'read', 'success': True, 'contents':self.log, 'source':'site', 'return':self.siteDirectory[self.siteID], 'request':None}, returnAddress)
 
                 if message['ballotNum'] >= self.ballotNum:
                     self.ballotNum = message['ballotNum']
@@ -115,9 +115,9 @@ class Network(threading.Thread):
                                     clientReturn = self.activeClientRequests[uniqueID]['return']
                                     initialValue = self.activeClientRequests[uniqueID]['initialValue']
                                     if initialValue == message['value']:
-                                        self.clientTalk({'action': 'post', 'success':True, 'contents': (message['ballotNum'][0], initialValue)}, clientReturn)
+                                        self.clientTalk({'action': 'post', 'success':True, 'contents': (message['ballotNum'][0], initialValue), 'request':self.activeClientRequests[uniqueID]['request']}, clientReturn)
                                     else:
-                                        self.clientTalk({'action': 'post', 'success':False, 'contents': (0, initialValue)}, clientReturn)
+                                        self.clientTalk({'action': 'post', 'success':False, 'contents': (0, initialValue), 'request':self.activeClientRequests[uniqueID]['request']}, clientReturn)
 
                     # If this is the first time we've recieved an accept for this message, broadcast it to everyone
                     else:
@@ -145,7 +145,7 @@ class Network(threading.Thread):
                         self.activeClientRequests[messageUniqueID]['nacks'].append(message)
                         # if 3 servers tell us our ballot number is too low, we will redo.
                         if(len(self.activeClientRequests[messageUniqueID]['nacks']) == 3):
-                            self.sendPreparePaxos(self.activeClientRequests[messageUniqueID]['initialValue'], self.activeClientRequests[messageUniqueID]['return'])
+                            self.sendPreparePaxos(self.activeClientRequests[messageUniqueID]['initialValue'], self.activeClientRequests[messageUniqueID]['return'],self.activeClientRequests[messageUniqueID]['request'] )
                             del self.activeClientRequests[messageUniqueID]
             if (action == 'read'):
                 with self.logLock:
@@ -158,12 +158,12 @@ class Network(threading.Thread):
             returnAddress = message['return']
             # A client will either read from a site, or it will attempt to post a new message in which case we initiate PAXOS
             if (action == 'read'):
-                self.clientTalk({'action': 'read', 'success': True, 'contents':self.log, 'source':'site', 'return':self.siteDirectory[self.siteID] }, returnAddress)
+                self.clientTalk({'action': 'read', 'success': True, 'contents':self.log, 'source':'site', 'return':self.siteDirectory[self.siteID], 'request':message['request'] }, returnAddress)
             elif (action == 'post'):
                 post = message['message']
                 self.sendPreparePaxos(post, returnAddress)
 
-    def sendPreparePaxos(self, message, returnAddress):
+    def sendPreparePaxos(self, message, returnAddress, clientRequestID):
         with self.logLock, self.requestLock:
             uniqueID = hash(time.time())
             with self.printLock:
@@ -172,19 +172,19 @@ class Network(threading.Thread):
             # If the slot number is less than the length of our log, then we know it will not pass. So we set it to the max of the past slots and the length of our log. If slot is larger, then there are some values we don't know about it. If the log is larger, then...nothing makes sense?
             slot = max(slot, len(self.log))
             self.ballotNum = (slot, num + 1, self.siteID)
-            clientRequest = {'return': returnAddress, 'value' : message, 'ballotNum': self.ballotNum, 'initialValue': message, 'acks' : [], 'nacks' : [], 'uniqueID':uniqueID}
+            clientRequest = {'return': returnAddress, 'value' : message, 'ballotNum': self.ballotNum, 'initialValue': message, 'acks' : [], 'nacks' : [], 'uniqueID':uniqueID, 'request':clientRequestID}
             self.activeClientRequests[uniqueID] = clientRequest
             prepareRequest = {'source': 'site', 'action':'prepare', 'return':self.siteDirectory[self.siteID], 'ballotNum': self.ballotNum, 'uniqueID':uniqueID}
             # here we automatically fail if we can't hit at least three sites with our prepare
             if (self.broadcast(prepareRequest) < 3):
-                self.clientTalk({'action': 'post', 'success':False, 'contents': (0, message)}, returnAddress)
+                self.clientTalk({'action': 'post', 'success':False, 'contents': (0, message), 'request':clientRequestID}, returnAddress)
                 del self.activeClientRequests[uniqueID]
 
     def sendAcceptPaxos(self, clientRequest):
         with self.requestLock:
             acceptRequest = {'source':'site', 'action':'accept', 'return':self.siteDirectory[self.siteID], 'ballotNum': clientRequest['ballotNum'], 'value':clientRequest['value'], 'uniqueID':clientRequest['uniqueID'] }
             if (self.broadcast(acceptRequest) < 3):
-                self.clientTalk({'action': 'post', 'success':False, 'contents': (0, clientRequest['initialValue'])}, clientRequest['return'])
+                self.clientTalk({'request':clientRequest['request'], 'action': 'post', 'success':False, 'contents': (0, clientRequest['initialValue'])}, clientRequest['return'])
                 self.activeClientRequests.remove(clientRequest)
 
     def sendAckPaxos(self, acceptMessage):
@@ -204,7 +204,7 @@ class Network(threading.Thread):
                 for request in self.activeClientRequests:
                     clientRequest = self.activeClientRequests[request]
                     if clientRequest['ballotNum'][0] < len(self.log) and self.log[clientRequest['ballotNum'][0]] != clientRequest['initialValue']:
-                        self.clientTalk({'action': 'post', 'success':False, 'contents': (0, clientRequest['initialValue'])}, clientRequest['return'])
+                        self.clientTalk({'action': 'post', 'success':False, 'contents': (0, clientRequest['initialValue']), 'request':clientRequest['request']}, clientRequest['return'])
                         old.append(request)
                 for i in old:
                     del self.activeClientRequests[i]
