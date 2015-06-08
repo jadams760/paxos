@@ -50,6 +50,7 @@ class Network(threading.Thread):
             while self.failLock.isSet():
                 try:
                     conn, addr = sock.accept()
+                    print ("accepting connection from %s" % str(addr))
                     message = pickle.loads(conn.recv(2048))
                     conn.close()
                     thread = threading.Thread(target=self.handle,args=(message,))
