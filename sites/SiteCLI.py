@@ -22,11 +22,11 @@ class SiteCLI(threading.Thread):
     def run(self):
         self.network.start()
         while True:
-            userInput = input("Please Enter One of the Following and Press Enter:\n(1) Fail\n(2) Recover\n")
-            if userInput == 1:
+            userInput = raw_input("Please Enter One of the Following and Press Enter:\n(1) Fail\n(2) Recover\n")
+            if userInput == '1':
                 self.failLock.clear()
 
-            elif userInput == 2:
+            elif userInput == '2':
                 self.failLock.set()
 
             else:
