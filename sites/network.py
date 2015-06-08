@@ -48,14 +48,17 @@ class Network(threading.Thread):
             sock.listen(1)
             # we accept connections until we get a fail event, then we close the socket and don't accept anything.
             while self.failLock.isSet():
-                conn, addr = sock.accept()
-                print ("accepting connection from %s" % str(addr))
-                message = pickle.loads(conn.recv(2048))
-                conn.close()
-                thread = threading.Thread(target=self.handle,args=(message,))
-                if self.failLock.isSet():
-                    print ("starting handler for %s" % str(message))
-                    thread.start()
+                try:
+                    conn, addr = sock.accept()
+                    print ("accepting connection from %s" % str(addr))
+                    message = pickle.loads(conn.recv(2048))
+                    conn.close()
+                    thread = threading.Thread(target=self.handle,args=(message,))
+                    if self.failLock.isSet():
+                        print ("starting handler for %s" % str(message))
+                        thread.start()
+                except:
+                    pass
             sock.close()
 
 
