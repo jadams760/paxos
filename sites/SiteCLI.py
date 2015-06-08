@@ -29,6 +29,9 @@ class SiteCLI(threading.Thread):
 
             elif userInput == '2':
                 self.failLock.set()
+            elif userInput == '3':
+                self.failLock.clear()
+                sys.exit()
 
             else:
                 print("Incorrect input type\n")
