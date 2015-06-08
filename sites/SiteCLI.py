@@ -13,6 +13,7 @@ class SiteCLI(threading.Thread):
     def __init__(self, hostname, port, sites, siteID):
         threading.Thread.__init__(self)
         self.failLock = threading.Event()
+        self.failLock.set()
         self.locks = { 'printLock': threading.RLock(), 'failLock': self.failLock }
         self.hostname = hostname
         self.port = port
