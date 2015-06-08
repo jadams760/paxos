@@ -55,6 +55,7 @@ class Network(threading.Thread):
                     conn.close()
                     thread = threading.Thread(target=self.handle,args=(message,))
                     if self.failLock.isSet():
+                        print ("starting handler for %s" % str(message))
                         thread.start()
                 except:
                     pass
