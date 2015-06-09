@@ -24,9 +24,10 @@ class SiteCLI(threading.Thread):
     def run(self):
         self.network.start()
         while True:
-            userInput = raw_input("Please Enter One of the Following and Press Enter:\n(1) Fail\n(2) Recover\n")
+            userInput = raw_input("Please Enter One of the Following and Press Enter:\n(1) Fail\n(2) Recover\n(3) Exit\n")
             if userInput == '1':
                 self.failLock.clear()
+                print ("Site going down.")
                 try:
                     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
                     sock.settimeout(2)
@@ -38,6 +39,7 @@ class SiteCLI(threading.Thread):
 
 
             elif userInput == '2':
+                print("Site coming back up!")
                 self.failLock.set()
             elif userInput == '3':
                 self.failLock.clear()

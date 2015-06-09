@@ -130,6 +130,7 @@ class Network(threading.Thread):
                         self.activeClientRequests[messageUniqueID]['acks'].append(message)
                         # If we get 3 acks, then we have a majority so we start the accept phase. Guaranteed to only do this once because of the lock.
                         if (len(self.activeClientRequests[messageUniqueID]['acks']) == 3):
+                            print("Received a majority of ACKs on site %i" % self.siteID)
                             # take the acceptVal with the highest acceptNum, or if they are all None simply take the initial vlaue.
                             highestVal = reduce(lambda acc, x1: x1 if (x1['acceptNum'] > acc['acceptNum'] and x1['acceptVal'] != None) else acc, self.activeClientRequests[messageUniqueID]['acks'], self.activeClientRequests[messageUniqueID]['acks'][0])
                             self.activeClientRequests[messageUniqueID]['value'] = highestVal['acceptVal'] if highestVal['acceptVal'] != None else self.activeClientRequests[messageUniqueID]['value']
