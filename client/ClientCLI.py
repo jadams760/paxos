@@ -9,25 +9,26 @@ import ClientServer
 import sys
 
 
-sites = [('localhost',9001),('localhost',9002),('localhost',9003),('localhost',9004),('localhost',9005)]
-#sites = [('localhost',9001)]
+sites = [('localhost',10001),('localhost',10002),('localhost',10003),('localhost',10004),('localhost',10005)]
 
 
 class ClientCLI(threading.Thread):
-    def __init__(self, hostname, port, sites):
+    def __init__(self, hostname, port, sites, clientNum):
         self.thread = threading.Thread.__init__(self)
         self.hostname = hostname
         self.port = port
         self.sites = sites
         self.leader =0
         self.server = ClientServer.ClientServer(self.hostname,self.port)
-        
+        self.requestNum = 0
+        self.clientNum = clientNum
+
         
     def myConnect(self,sock,host,port):
         sock.connect((host,port))
 
     def mySend(self,sock,send):
-        sock.send(pickle.dumps(send))
+        sock.send(pickle.dumps(send, protocol=2))
 
 
 
@@ -45,14 +46,17 @@ class ClientCLI(threading.Thread):
                         self.myConnect(sock, self.sites[self.leader][0], self.sites[self.leader][1])
                         leaderFound = True
                     except ConnectionRefusedError:
+                        self.leader = random.randint(0,4)
                         print('connection refused')
 
-                    self.leader = random.randint(0,4)
-  
-                send = {'action':'read', 'return':(self.hostname, self.port), 'message':'', 'source':'client'}
+                    
+                request = str(self.clientNum) + "_" + str(self.requestNum)
+                send = {'time':time.time(), 'request':request, 'action':'read', 'return':(self.hostname, self.port), 'message':'', 'source':'client'}
+                self.requestNum += 1
+                self.server.requests.append(send)
                 self.mySend(sock,send)
                 sock.close()
-            
+                time.sleep(2)
                 
             elif userInput == "2":
                 userInput = input("Please enter a message to append:\n")
@@ -65,13 +69,18 @@ class ClientCLI(threading.Thread):
                         self.myConnect(sock, self.sites[self.leader][0], self.sites[self.leader][1])
                         leaderFound = True
                     except ConnectionRefusedError:
+                        self.leader = random.randint(0,4)
                         print('connection refused')
 
-                    self.leader = random.randint(0,4)
-
-                send = {'action':'post', 'return':(self.hostname, self.port), 'message':userInput, 'source':'client'}
+                print('connected to site ' + str(self.leader))
+                request = str(self.clientNum) + "_" + str(self.requestNum)
+                send = {'time': time.time(), 'request':request, 'action':'post', 'return':(self.hostname, self.port), 'message':userInput, 'source':'client'}
+                self.server.requests.append(send)
+                self.requestNum += 1
                 self.mySend(sock,send)
+                print('send to site ' + str(self.leader))
                 sock.close()
+                time.sleep(2)
                     
             elif userInput == "3":
                 return False
