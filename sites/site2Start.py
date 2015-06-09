@@ -26,8 +26,8 @@ class Dummy(threading.Thread):
 
 if __name__ == '__main__':
 
-    sites = { 5:('localhost', 10005), 1:('localhost', 10001), 2:('localhost', 10002), 3:('localhost', 10003), 4:('localhost', 10004) }
-    site = SiteCLI.SiteCLI( 'localhost', 10002, sites, 2)
+    sites = { 5:('54.94.238.121', 10000), 1:('52.1.255.120', 10000), 2:('52.8.104.33', 10000), 3:('52.74.168.17', 10000), 4:('52.64.98.238', 10000) }
+    site = SiteCLI.SiteCLI( '52.8.104.33', 10000, sites, 2)
 
     site.start()
 
