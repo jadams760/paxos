@@ -19,6 +19,7 @@ class SiteCLI(threading.Thread):
         self.port = port
         self.sites = sites
         self.network = network.Network(hostname, port, sites, siteID, self.locks)
+        self.siteID = siteID
 
     def run(self):
         self.network.start()
@@ -26,6 +27,15 @@ class SiteCLI(threading.Thread):
             userInput = raw_input("Please Enter One of the Following and Press Enter:\n(1) Fail\n(2) Recover\n")
             if userInput == '1':
                 self.failLock.clear()
+                try:
+                    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                    sock.settimeout(2)
+                    sock.connect(self.sites[self.siteID])
+                    sock.send(pickle.dumps(""))
+                    sock.close()
+                except:
+                    pass
+
 
             elif userInput == '2':
                 self.failLock.set()
